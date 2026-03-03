@@ -1,20 +1,16 @@
-import sqlite3
-#Connect to the SQLite database (or create it if it doesnot exist)
-conn = sqlite3.connect('licensePlatesDatabase.db')
+import pymysql
+import os
+from dotenv import load_dotenv
 
-#Create a cusrsor object to interact with the datbase
-cursor = conn.cursor()
+load_dotenv()
 
-
-#Create a table to store the License Plate Data
-
-cursor.execute(
-    '''
-    CREATE TABLE IF NOT EXISTS LicensePlates(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        start_time TEXT,
-        end_time TEXT,
-        license_plate TEXT
+def get_db_connection():
+    # PyMySQL connection style
+    return pymysql.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
+        cursorclass=pymysql.cursors.DictCursor # This makes results look like JSON
     )
-    '''
-)
+

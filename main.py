@@ -5,8 +5,8 @@ from datetime import datetime
 from config import *
 from core.detection import LicensePlateDetector
 from core.ocr import LicensePlateOCR
-from core.storage.json import JSONStorage
-from core.storage.DB import DatabaseStorage
+from core.storing import JSONStorage
+from core.storing import DatabaseStorage
 
 # ---------- CLI ARGUMENT ----------
 parser = argparse.ArgumentParser(description="ANPR System")
@@ -25,11 +25,12 @@ if source.isdigit():
 
 cap = cv2.VideoCapture(source)
 
+
 # ---------- MODULE INIT ----------
 detector = LicensePlateDetector(MODEL_PATH, CLASS_NAMES, CONF_THRESHOLD)
 ocr_engine = LicensePlateOCR()
 json_storage = JSONStorage(JSON_DIR)
-db_storage = DatabaseStorage(DB_PATH)
+db_storage = DatabaseStorage(DB_CONFIG)
 
 start_time = datetime.now()
 license_plates = set()
@@ -55,15 +56,25 @@ while True:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                     (255, 255, 255), 2)
 
+    # ---------- SAVE TO JSON + MYSQL ----------
     if (datetime.now() - start_time).seconds >= SAVE_INTERVAL_SECONDS:
-        json_storage.save(license_plates, start_time, datetime.now())
-        db_storage.save(license_plates, start_time, datetime.now())
+        end_time = datetime.now()
+
+        if license_plates:
+            json_storage.save(license_plates, start_time, end_time)
+            db_storage.save(license_plates, start_time, end_time)
+            print(f"[INFO] Saved {len(license_plates)} plates")
+
         license_plates.clear()
         start_time = datetime.now()
 
     cv2.imshow("ANPR System", frame)
-    if cv2.waitKey(1) & 0xFF == ord("1"):
+
+    # Press 'q' to quit (better than 1)
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
+# ---------- CLEANUP ----------
 cap.release()
 cv2.destroyAllWindows()
+db_storage.close()
